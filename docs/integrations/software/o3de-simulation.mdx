@@ -1,0 +1,212 @@
+---
+title: How to Simulate a Mobile Robot with Open 3D Engine and ROS
+sidebar_label: O3DE simulation
+keywords:
+  - o3de
+  - open 3d engine
+  - ros
+  - simulation
+  - software
+  - leo
+  - integration
+description: >-
+  Step-by-step guide to set up and run the simulation environment in Open 3D
+  Engine (O3DE) with ROS.
+image: /img/robots/leo/integrations/gazebo-zed2/leo-rover-gazebo.webp
+---
+
+# O3DE Simulation for Mobile Robots
+
+In this tutorial you will learn how to launch an Open 3D Engine (O3DE)
+simulation with the Leo Rover robot model.
+
+## Prerequisites
+
+<LinkButton
+  to="/leo-rover/advanced-guides/install-ros-on-your-computer"
+  title="Install ROS on your computer"
+  description="Learn how to install the Robot Operating System (ROS) on your computer.
+  Step-by-step guide for beginners."
+/>
+
+The simulation requires `ROS` (Robot Operating System) and was mainly developed
+and tested with
+[ROS 2 Humble Hawksbill](https://docs.ros.org/en/humble/Installation.html)
+distribution on
+[Ubuntu 22.04 Jammy Jellyfish](https://releases.ubuntu.com/22.04/).
+
+Other distributions might not work properly so it is recommended to use the same
+setup.
+
+:::note
+
+The guide will refer to the distribution of your choice (for example humble or
+jazzy) as `<distro>`.
+
+:::
+
+<ImageZoom
+  loading="eager"
+  src="/img/robots/leo/integrations/gazebo-zed2/leo-rover-gazebo.webp"
+  alt="Leo Rover model in O3DE"
+  width="1024"
+  height="740"
+/>
+
+## Installing O3DE
+
+There are two ways to install O3DE — building from source or using a pre-built
+SDK. Choose the one that best fits your needs.
+
+### Option 1 — Pre-built SDK (recommended)
+
+Building O3DE from source can take a significant amount of time. If you want to
+get started quickly, you can download a pre-built engine SDK from the
+[O3DE releases page](https://github.com/o3de/o3de/releases). The SDK includes a
+pre-compiled engine so you can skip the full source build.
+
+1. Download the `.deb` installer package from the
+   [O3DE download page](https://o3de.org/download/).
+2. Install the package:
+
+   ```bash
+   sudo apt install ./O3DE_<version>_Ubuntu<version>.deb
+   ```
+
+3. The engine installs to `/opt/O3DE/<version>` by default. Register it:
+
+   ```bash
+   /opt/O3DE/<version>/scripts/o3de.sh register --this-engine
+   ```
+
+4. Install the ROS 2 Gem. You can download a pre-built version or build it
+   against the SDK:
+
+   ```bash
+   git clone https://github.com/o3de/o3de-extras.git /opt/o3de-extras
+   /opt/O3DE/<version>/scripts/o3de.sh register --gem-path /opt/o3de-extras/Gems/ROS2
+   ```
+
+:::tip
+
+Using the SDK avoids compiling the entire engine and significantly reduces setup
+time. However, the pre-built SDK may not work correctly on Ubuntu distributions
+other than the one it was built for. If you encounter compatibility issues, use
+the source build option below.
+
+:::
+
+### Option 2 — Build from source
+
+Follow the
+[official O3DE installation guide](https://www.o3de.org/docs/welcome-guide/setup/setup-from-github/)
+to build Open 3D Engine from source. Make sure to install all required
+dependencies before building.
+
+You will also need the
+[ROS 2 Gem for O3DE](https://github.com/o3de/o3de-extras/tree/development/Gems/ROS2)
+which provides the bridge between O3DE and the ROS 2 ecosystem.
+
+## Creating the project
+
+You need to create a new O3DE project and configure it to use the ROS 2 Gem.
+Make sure the engine and the o3de-extras repository are registered (see the
+installation steps above).
+
+First, register the ROS 2 project template from o3de-extras:
+
+```bash
+o3de register --template-path /opt/o3de-extras/Templates/Ros2ProjectTemplate
+```
+
+Then create the project:
+
+```bash
+o3de create-project --project-name LeoSimulation \
+  --project-path ~/LeoSimulation \
+  --template Ros2ProjectTemplate
+```
+
+This creates a new project based on the ROS 2 project template from the
+[o3de-extras](https://github.com/o3de/o3de-extras) repository.
+
+Next, build the project:
+
+```bash
+cd ~/LeoSimulation
+cmake -B build -S . \
+  -DLY_DISABLE_TEST_MODULES=ON \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+:::note
+
+Building the project for the first time may take a while. Subsequent builds will
+be faster thanks to incremental compilation.
+
+:::
+
+## Launching
+
+Source your ROS environment:
+
+```bash
+source /opt/ros/<distro>/setup.bash
+```
+
+To start the simulation, run the project:
+
+```bash
+cd ~/LeoSimulation
+./build/bin/Linux/Release/Launcher
+```
+
+:::info
+
+This will open the O3DE editor where you can load or create levels and configure
+the simulation environment.
+
+:::
+
+## Controlling the simulated rover
+
+Now you can operate the simulated robots in the same way as the real one. You
+can use `ros2 topic echo` command to get info from the robots, and
+`ros2 topic pub` to operate it. For example, with this command the robot will
+start driving forward:
+
+```bash
+ros2 topic pub /leo_sim1/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 20
+```
+
+You can also control the rover using a joystick. To do so you need the
+`leo-teleop` package:
+
+```bash
+sudo apt install ros-${ROS_DISTRO}-leo-teleop
+```
+
+To operate the rover with joystick, connect a controller to your computer and
+run:
+
+```bash
+ros2 launch leo_teleop joy_teleop.launch.xml cmd_vel_out:=/leo_sim1/cmd_vel
+```
+
+:::tip
+
+You can choose which rover to operate with the joystick by providing the correct
+namespace for the argument `cmd_vel_out`. In the example it's `leo_sim1`. If no
+value is provided, the node will use the default namespace and topic —
+`/cmd_vel`.
+
+:::
+
+The command mapping was set for the Xbox 360 controller and looks like this:
+
+| Xbox 360 Controller       | Command                                  |
+| ------------------------- | ---------------------------------------- |
+| RB                        | button enable - hold it to send commands |
+| Left joystick Up/Down     | linear velocity                          |
+| Right joystick Left/Right | angular velocity                         |
