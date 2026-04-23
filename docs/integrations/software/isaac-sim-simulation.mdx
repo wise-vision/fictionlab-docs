@@ -1,0 +1,232 @@
+---
+title: How to Simulate Leo Rover with NVIDIA Isaac Sim and ROS 2
+sidebar_label: Isaac Sim simulation
+keywords:
+  - isaac sim
+  - nvidia omniverse
+  - ros 2
+  - simulation
+  - software
+  - leo
+  - integration
+  - usd
+description: >-
+  Step-by-step guide to set up and run the Leo Rover simulation in NVIDIA Isaac
+  Sim with ROS 2.
+image: /img/robots/leo/integrations/isaac-sim/leo-rover-isaac-sim.webp
+slug: /software/isaac-sim-simulation
+---
+
+# Isaac Sim Simulation for Leo Rover
+
+In this tutorial you will learn how to launch a Leo Rover simulation with NVIDIA
+Isaac Sim and control the rover with ROS 2 commands.
+
+## Prerequisites
+
+<LinkButton
+  to="/leo-rover/advanced-guides/install-ros-on-your-computer"
+  title="Install ROS on your computer"
+  description="Learn how to install the Robot Operating System (ROS) on your computer.
+  Step-by-step guide for beginners."
+/>
+
+The simulation requires `ROS 2` (Robot Operating System) and NVIDIA Isaac Sim.
+The Isaac Sim ROS 2 Bridge supports
+[ROS 2 Jazzy and Humble](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html).
+For Ubuntu 24.04, use ROS 2 Jazzy. For Ubuntu 22.04, use ROS 2 Humble.
+
+Other distributions might not work properly so it is recommended to use one of
+the supported setups.
+
+:::note
+
+The guide will refer to the distribution of your choice (for example humble or
+jazzy) as `<distro>`.
+
+:::
+
+Isaac Sim requires an NVIDIA RTX GPU and a workstation that meets the
+[official Isaac Sim requirements](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/requirements.html).
+Before using the simulation, run the Isaac Sim Compatibility Checker included
+with the Isaac Sim installation.
+
+<ImageZoom
+  loading="eager"
+  src="/img/robots/leo/integrations/isaac-sim/leo-rover-isaac-sim.webp"
+  alt="Leo Rover model in NVIDIA Isaac Sim"
+  width="954"
+  height="700"
+/>
+
+## Installing Isaac Sim
+
+Follow the
+[official workstation installation guide](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_workstation.html)
+to install Isaac Sim. The workstation installation is recommended when you want
+to run Isaac Sim as a GUI application on a local Linux or Windows computer with
+an NVIDIA GPU.
+
+On Linux, the installation flow looks like this:
+
+```bash
+mkdir ~/isaacsim
+cd ~/Downloads
+unzip "isaac-sim-standalone-<version>-linux-x86_64.zip" -d ~/isaacsim
+cd ~/isaacsim
+./post_install.sh
+```
+
+Run the compatibility checker:
+
+```bash
+cd ~/isaacsim
+./isaac-sim.compatibility_check.sh
+```
+
+Then start Isaac Sim:
+
+```bash
+cd ~/isaacsim
+./isaac-sim.sh
+```
+
+:::note
+
+The first Isaac Sim launch can take several minutes while the shader cache is
+prepared.
+
+:::
+
+## Preparing the Leo Rover assets
+
+Download or clone the Leo Rover Isaac Sim assets repository:
+
+```bash
+git clone git@github.com:wise-vision/LeoRoverIsaacSim.git ~/LeoRoverIsaacSim
+```
+
+The repository contains the ready-to-use USD stage and modular configuration
+layers:
+
+| File                                          | Purpose                                     |
+| --------------------------------------------- | ------------------------------------------- |
+| `LeoRover/LeoRover.usd`                       | Main USD file to open in Isaac Sim          |
+| `LeoRover/configuration/LeoRover_base.usd`    | Base rover model layer                      |
+| `LeoRover/configuration/LeoRover_robot.usd`   | Robot structure and articulation layer      |
+| `LeoRover/configuration/LeoRover_physics.usd` | Physics configuration layer                 |
+| `LeoRover/configuration/LeoRover_sensor.usd`  | Sensor configuration layer                  |
+| `LeoRover/configuration/LeoRover_ros.usd`     | ROS 2 Bridge graph and differential control |
+
+Keep the `LeoRover` directory structure unchanged. The main
+`LeoRover/LeoRover.usd` file loads the configuration layers with relative paths.
+
+## Launching the simulation
+
+Start Isaac Sim:
+
+```bash
+cd ~/isaacsim
+./isaac-sim.sh
+```
+
+Then open the Leo Rover stage:
+
+1. Select **File** > **Open**.
+2. Open `~/LeoRoverIsaacSim/LeoRover/LeoRover.usd`.
+3. Wait until all USD layers are loaded.
+4. Press **Play** in the Isaac Sim timeline.
+
+:::info
+
+The supplied USD stage includes the rover model, physics setup, sensors, and a
+ROS 2 `Twist` subscriber connected to a differential controller.
+
+:::
+
+## Setting up ROS 2 communication
+
+Isaac Sim can use the ROS 2 libraries included with Isaac Sim. If you are using
+only standard ROS 2 message types, launch Isaac Sim from a clean terminal and
+use a separate terminal for ROS 2 commands.
+
+In the ROS 2 terminal, source your ROS environment:
+
+```bash
+source /opt/ros/<distro>/setup.bash
+```
+
+If you use a custom ROS 2 workspace, source it too:
+
+```bash
+source ~/ros2_ws/install/setup.bash
+```
+
+To verify that ROS 2 can see the simulation, list the available topics after
+pressing **Play** in Isaac Sim:
+
+```bash
+ros2 topic list
+```
+
+:::tip
+
+If the ROS 2 topics are not visible, make sure the ROS 2 Bridge extension is
+enabled in Isaac Sim. Open **Window** > **Extensions**, search for
+`ROS 2 Bridge`, enable it, and restart the simulation.
+
+:::
+
+## Controlling the simulated rover
+
+The supplied Isaac Sim graph subscribes to the default `cmd_vel` topic. Publish
+a `geometry_msgs/msg/Twist` message to drive the rover forward:
+
+```bash
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 20
+```
+
+Stop the rover by publishing zero velocity:
+
+```bash
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" --once
+```
+
+You can also control the rover using a joystick. To do so you need the
+`leo-teleop` package:
+
+```bash
+sudo apt install ros-${ROS_DISTRO}-leo-teleop
+```
+
+To operate the rover with a joystick, connect a controller to your computer and
+run:
+
+```bash
+ros2 launch leo_teleop joy_teleop.launch.xml cmd_vel_out:=/cmd_vel
+```
+
+:::tip
+
+If you change the `topicName` or `nodeNamespace` input of the ROS 2 `Twist`
+subscriber in the Isaac Sim graph, publish commands to that new topic instead of
+`/cmd_vel`.
+
+:::
+
+The command mapping was set for the Xbox 360 controller and looks like this:
+
+| Xbox 360 Controller       | Command                                  |
+| ------------------------- | ---------------------------------------- |
+| RB                        | button enable - hold it to send commands |
+| Left joystick Up/Down     | linear velocity                          |
+| Right joystick Left/Right | angular velocity                         |
+
+## Troubleshooting
+
+If the rover does not react to ROS 2 commands:
+
+1. Make sure Isaac Sim is running and the timeline is playing.
+2. Check that the ROS 2 Bridge extension is enabled.
+3. Verify that your ROS 2 terminal and Isaac Sim use the same `ROS_DOMAIN_ID`.
+4. Confirm that commands are published to `/cmd_vel`.
