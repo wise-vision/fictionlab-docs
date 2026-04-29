@@ -33,7 +33,7 @@ Isaac Sim and control the rover with ROS 2 commands.
 
 The simulation requires `ROS 2` (Robot Operating System) and NVIDIA Isaac Sim.
 The Isaac Sim ROS 2 Bridge supports
-[ROS 2 Jazzy and Humble](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html).
+[ROS 2 Jazzy and Humble](https://docs.isaacsim.omniverse.nvidia.com/latest/installation/install_ros.html).
 For Ubuntu 24.04, use ROS 2 Jazzy. For Ubuntu 22.04, use ROS 2 Humble.
 
 Other distributions might not work properly so it is recommended to use one of
@@ -47,7 +47,7 @@ jazzy) as `<distro>`.
 :::
 
 Isaac Sim requires an NVIDIA RTX GPU and a workstation that meets the
-[official Isaac Sim requirements](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/requirements.html).
+[official Isaac Sim requirements](https://docs.isaacsim.omniverse.nvidia.com/latest/installation/requirements.html).
 Before using the simulation, run the Isaac Sim Compatibility Checker included
 with the Isaac Sim installation.
 
@@ -62,7 +62,7 @@ with the Isaac Sim installation.
 ## Installing Isaac Sim
 
 Follow the
-[official workstation installation guide](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_workstation.html)
+[official workstation installation guide](https://docs.isaacsim.omniverse.nvidia.com/latest/installation/install_workstation.html)
 to install Isaac Sim. The workstation installation is recommended when you want
 to run Isaac Sim as a GUI application on a local Linux or Windows computer with
 an NVIDIA GPU.
@@ -121,6 +121,13 @@ layers:
 Keep the `LeoRover` directory structure unchanged. The main
 `LeoRover/LeoRover.usd` file loads the configuration layers with relative paths.
 
+:::note
+
+Isaac Sim uses USD (Universal Scene Description ) format to represent all assets.
+Read more about USD [here](https://developer.nvidia.com/usd).
+
+:::
+
 ## Launching the simulation
 
 Start Isaac Sim:
@@ -132,10 +139,11 @@ cd ~/isaacsim
 
 Then open the Leo Rover stage:
 
-1. Select **File** > **Open**.
+1. Select **File > Open**.
 2. Open `~/LeoRoverIsaacSim/LeoRover/LeoRover.usd`.
 3. Wait until all USD layers are loaded.
-4. Press **Play** in the Isaac Sim timeline.
+4. Add flat grid **Create > Environments > Flat Grid**.
+5. Press **Play** in the Isaac Sim timeline.
 
 :::info
 
@@ -173,7 +181,7 @@ The supplied Isaac Sim graph subscribes to the default `cmd_vel` topic. Publish
 a `geometry_msgs/msg/Twist` message to drive the rover forward:
 
 ```bash
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 20
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 20
 ```
 
 Stop the rover by publishing zero velocity:
